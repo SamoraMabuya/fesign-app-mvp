@@ -8,14 +8,20 @@ const Home = () => {
     height: number;
   } | null>(null);
   const [selectedShape, setSelectedShape] = useState<string | null>(null);
+  const [sides, setSides] = useState<number | null>(null); // Add sides state
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   const handleCanvasSelect = (width: number, height: number) => {
     setCanvasSize({ width, height });
   };
 
-  const handleShapeSelect = (shape: string) => {
+  const handleShapeSelect = (shape: string, sides?: number) => {
     setSelectedShape(shape);
+    if (shape === "polygon" && sides) {
+      setSides(sides);
+    } else {
+      setSides(null);
+    }
   };
 
   useEffect(() => {
@@ -47,20 +53,32 @@ const Home = () => {
             ctx.stroke();
             break;
           case "polygon":
-            ctx.beginPath();
-            ctx.moveTo(100, 50);
-            ctx.lineTo(150, 150);
-            ctx.lineTo(50, 150);
-            ctx.closePath();
-            ctx.fill();
-            ctx.stroke();
+            if (sides && sides >= 3) {
+              const centerX = 125;
+              const centerY = 125;
+              const radius = 50;
+              ctx.beginPath();
+              for (let i = 0; i < sides; i++) {
+                const angle = (i * 2 * Math.PI) / sides;
+                const x = centerX + radius * Math.cos(angle);
+                const y = centerY + radius * Math.sin(angle);
+                if (i === 0) {
+                  ctx.moveTo(x, y);
+                } else {
+                  ctx.lineTo(x, y);
+                }
+              }
+              ctx.closePath();
+              ctx.fill();
+              ctx.stroke();
+            }
             break;
           default:
             break;
         }
       }
     }
-  }, [selectedShape]);
+  }, [selectedShape, sides]);
 
   return (
     <div className="h-screen flex flex-col">

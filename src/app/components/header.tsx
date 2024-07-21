@@ -3,12 +3,13 @@ import { CanvasIcon, FileIcon, ShapesIcon, TextIcon } from "./icons";
 
 type HeaderProps = {
   onCanvasSelect: (width: number, height: number) => void;
-  onShapeSelect: (shape: string) => void;
+  onShapeSelect: (shape: string, sides?: number) => void;
 };
 
 const Header = ({ onCanvasSelect, onShapeSelect }: HeaderProps) => {
   const [fileDropdownOpen, setFileDropdownOpen] = useState(false);
   const [shapeDropdownOpen, setShapeDropdownOpen] = useState(false);
+  const [polygonDropdownOpen, setPolygonDropdownOpen] = useState(false);
   const [canvasDropdownOpen, setCanvasDropdownOpen] = useState(false);
 
   const canvasOptions = [
@@ -49,7 +50,7 @@ const Header = ({ onCanvasSelect, onShapeSelect }: HeaderProps) => {
         </button>
         {fileDropdownOpen && (
           <div className="absolute mt-1 w-48 bg-white border border-gray-300 rounded shadow-lg">
-            <ul>
+            <ul className="absolute mt-1 w-64 bg-neutral-700 rounded shadow-lg max-h-[50vh] overflow-y-auto">
               <li className="px-4 py-2 hover:bg-gray-200 cursor-pointer">
                 Item 1
               </li>
@@ -95,14 +96,32 @@ const Header = ({ onCanvasSelect, onShapeSelect }: HeaderProps) => {
               >
                 Line
               </li>
-              <li
-                className="px-4 py-2 hover:bg-gray-200 cursor-pointer"
-                onClick={() => {
-                  onShapeSelect("polygon");
-                  setShapeDropdownOpen(false);
-                }}
-              >
-                Polygon
+              <li className="relative">
+                <button
+                  className="px-4 py-2 w-full text-left hover:bg-gray-200 cursor-pointer"
+                  onClick={() => setPolygonDropdownOpen(!polygonDropdownOpen)}
+                >
+                  Polygon
+                </button>
+                {polygonDropdownOpen && (
+                  <div className="absolute mt-1 w-48 bg-white border border-gray-300 rounded shadow-lg">
+                    <ul className="absolute mt-1 w-64 bg-neutral-700 rounded shadow-lg max-h-[50vh] overflow-y-auto">
+                      {[...Array(8)].map((_, index) => (
+                        <li
+                          key={index}
+                          className="px-4 py-2 hover:bg-gray-200 cursor-pointer"
+                          onClick={() => {
+                            onShapeSelect("polygon", index + 3);
+                            setPolygonDropdownOpen(false);
+                            setShapeDropdownOpen(false);
+                          }}
+                        >
+                          {index + 3} Sides
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </li>
             </ul>
           </div>
