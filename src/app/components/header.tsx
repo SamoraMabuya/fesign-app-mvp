@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { CanvasIcon, FileIcon, ShapesIcon, TextIcon } from "./icons";
 
-interface HeaderProps {
+type HeaderProps = {
   onCanvasSelect: (width: number, height: number) => void;
-}
+  onShapeSelect: (shape: string) => void;
+};
 
-const Header: React.FC<HeaderProps> = ({ onCanvasSelect }) => {
+const Header = ({ onCanvasSelect, onShapeSelect }: HeaderProps) => {
   const [fileDropdownOpen, setFileDropdownOpen] = useState(false);
   const [shapeDropdownOpen, setShapeDropdownOpen] = useState(false);
   const [canvasDropdownOpen, setCanvasDropdownOpen] = useState(false);
@@ -66,14 +67,32 @@ const Header: React.FC<HeaderProps> = ({ onCanvasSelect }) => {
         </button>
         {shapeDropdownOpen && (
           <div className="absolute mt-1 w-48 bg-white border border-gray-300 rounded shadow-lg">
-            <ul>
-              <li className="px-4 py-2 hover:bg-gray-200 cursor-pointer">
+            <ul className="absolute mt-1 w-64 bg-neutral-700 rounded shadow-lg max-h-[50vh] overflow-y-auto">
+              <li
+                className="px-4 py-2 hover:bg-gray-200 cursor-pointer"
+                onClick={() => {
+                  onShapeSelect("rectangle");
+                  setShapeDropdownOpen(false);
+                }}
+              >
                 Rectangle
               </li>
-              <li className="px-4 py-2 hover:bg-gray-200 cursor-pointer">
+              <li
+                className="px-4 py-2 hover:bg-gray-200 cursor-pointer"
+                onClick={() => {
+                  onShapeSelect("circle");
+                  setShapeDropdownOpen(false);
+                }}
+              >
                 Circle
               </li>
-              <li className="px-4 py-2 hover:bg-gray-200 cursor-pointer">
+              <li
+                className="px-4 py-2 hover:bg-gray-200 cursor-pointer"
+                onClick={() => {
+                  onShapeSelect("line");
+                  setShapeDropdownOpen(false);
+                }}
+              >
                 Line
               </li>
             </ul>
