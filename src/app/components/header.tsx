@@ -95,6 +95,15 @@ const Header = ({ onCanvasSelect, onShapeSelect }: HeaderProps) => {
               >
                 Line
               </li>
+              <li
+                className="px-4 py-2 hover:bg-gray-200 cursor-pointer"
+                onClick={() => {
+                  onShapeSelect("polygon");
+                  setShapeDropdownOpen(false);
+                }}
+              >
+                Polygon
+              </li>
             </ul>
           </div>
         )}

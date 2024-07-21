@@ -2,7 +2,7 @@
 import { useState, useRef, useEffect } from "react";
 import Header from "./components/header";
 
-const Home: React.FC = () => {
+const Home = () => {
   const [canvasSize, setCanvasSize] = useState<{
     width: number;
     height: number;
@@ -44,6 +44,15 @@ const Home: React.FC = () => {
             ctx.beginPath();
             ctx.moveTo(50, 50);
             ctx.lineTo(200, 200);
+            ctx.stroke();
+            break;
+          case "polygon":
+            ctx.beginPath();
+            ctx.moveTo(100, 50);
+            ctx.lineTo(150, 150);
+            ctx.lineTo(50, 150);
+            ctx.closePath();
+            ctx.fill();
             ctx.stroke();
             break;
           default:
