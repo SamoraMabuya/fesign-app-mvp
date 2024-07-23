@@ -1,6 +1,16 @@
 "use client";
+
 import { useState, useRef, useEffect } from "react";
 import Header from "./components/header";
+
+type Shape = {
+  type: string;
+  startX: number;
+  startY: number;
+  endX: number;
+  endY: number;
+  sides?: number;
+};
 
 const Home: React.FC = () => {
   const [canvasSize, setCanvasSize] = useState<{
@@ -16,6 +26,7 @@ const Home: React.FC = () => {
   const [currentPos, setCurrentPos] = useState<{ x: number; y: number } | null>(
     null
   );
+  const [shapes, setShapes] = useState<Shape[]>([]);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   const handleCanvasSelect = (width: number, height: number) => {
@@ -31,23 +42,16 @@ const Home: React.FC = () => {
     }
   };
 
-  const drawShape = (
-    ctx: CanvasRenderingContext2D,
-    startX: number,
-    startY: number,
-    endX: number,
-    endY: number
-  ) => {
+  const drawShape = (ctx: CanvasRenderingContext2D, shape: Shape) => {
+    const { type, startX, startY, endX, endY, sides } = shape;
     const width = endX - startX;
     const height = endY - startY;
-
-    ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 
     ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
     ctx.strokeStyle = "black";
     ctx.lineWidth = 2;
 
-    switch (selectedShape) {
+    switch (type) {
       case "rectangle":
         ctx.fillRect(startX, startY, width, height);
         ctx.strokeRect(startX, startY, width, height);
@@ -116,13 +120,33 @@ const Home: React.FC = () => {
       setCurrentPos({ x, y });
 
       const ctx = canvasRef.current.getContext("2d");
-      if (ctx && startPos) {
-        drawShape(ctx, startPos.x, startPos.y, x, y);
+      if (ctx) {
+        ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+        shapes.forEach((shape) => drawShape(ctx, shape));
+        drawShape(ctx, {
+          type: selectedShape!,
+          startX: startPos.x,
+          startY: startPos.y,
+          endX: x,
+          endY: y,
+          sides: sides || undefined,
+        });
       }
     }
   };
 
   const handleMouseUp = () => {
+    if (isDrawing && startPos && currentPos) {
+      const newShape: Shape = {
+        type: selectedShape!,
+        startX: startPos.x,
+        startY: startPos.y,
+        endX: currentPos.x,
+        endY: currentPos.y,
+        sides: sides || undefined,
+      };
+      setShapes([...shapes, newShape]);
+    }
     setIsDrawing(false);
     setStartPos(null);
     setCurrentPos(null);
@@ -141,15 +165,17 @@ const Home: React.FC = () => {
         canvas.removeEventListener("mouseup", handleMouseUp);
       };
     }
-  }, [
-    selectedShape,
-    sides,
-    isDrawing,
-    startPos,
-    currentPos,
-    handleMouseDown,
-    handleMouseMove,
-  ]);
+  }, [selectedShape, sides, isDrawing, startPos, currentPos, shapes]);
+
+  useEffect(() => {
+    if (canvasRef.current) {
+      const ctx = canvasRef.current.getContext("2d");
+      if (ctx) {
+        ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+        shapes.forEach((shape) => drawShape(ctx, shape));
+      }
+    }
+  }, [shapes]);
 
   return (
     <div className="h-screen flex flex-col">
