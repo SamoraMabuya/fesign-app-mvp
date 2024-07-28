@@ -1,12 +1,23 @@
 import { useState } from "react";
-import { CanvasIcon, FileIcon, ShapesIcon, TextIcon } from "./icons";
+import {
+  CanvasIcon,
+  FileIcon,
+  SelectorIcon,
+  ShapesIcon,
+  TextIcon,
+} from "./icons";
 
 type HeaderProps = {
   onCanvasSelect: (width: number, height: number) => void;
   onShapeSelect: (shape: string, sides?: number) => void;
+  onSelectModeToggle: () => void;
 };
 
-const Header = ({ onCanvasSelect, onShapeSelect }: HeaderProps) => {
+const Header = ({
+  onCanvasSelect,
+  onShapeSelect,
+  onSelectModeToggle,
+}: HeaderProps) => {
   const [fileDropdownOpen, setFileDropdownOpen] = useState(false);
   const [shapeDropdownOpen, setShapeDropdownOpen] = useState(false);
   const [polygonDropdownOpen, setPolygonDropdownOpen] = useState(false);
@@ -57,6 +68,12 @@ const Header = ({ onCanvasSelect, onShapeSelect }: HeaderProps) => {
             </ul>
           </div>
         )}
+      </div>
+      <div className="relative">
+        <button onClick={onSelectModeToggle} className="px-4 py-2 flex gap-2">
+          <SelectorIcon />
+          Selector
+        </button>
       </div>
       <div className="relative">
         <button

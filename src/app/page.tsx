@@ -1,9 +1,9 @@
 "use client";
-
 import { useState, useRef, useEffect } from "react";
 import Header from "./components/header";
 
 type Shape = {
+  id: string;
   type: string;
   startX: number;
   startY: number;
@@ -27,6 +27,11 @@ const Home: React.FC = () => {
     null
   );
   const [shapes, setShapes] = useState<Shape[]>([]);
+  const [selectedShapeId, setSelectedShapeId] = useState<string | null>(null);
+  const [isSelectMode, setIsSelectMode] = useState(false);
+  const [dragOffset, setDragOffset] = useState<{ x: number; y: number } | null>(
+    null
+  );
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   const handleCanvasSelect = (width: number, height: number) => {
@@ -35,6 +40,8 @@ const Home: React.FC = () => {
 
   const handleShapeSelect = (shape: string, sides?: number) => {
     setSelectedShape(shape);
+    setIsSelectMode(false);
+    setSelectedShapeId(null); // Add this line
     if (shape === "polygon" && sides) {
       setSides(sides);
     } else {
@@ -42,7 +49,16 @@ const Home: React.FC = () => {
     }
   };
 
-  const drawShape = (ctx: CanvasRenderingContext2D, shape: Shape) => {
+  const handleSelectModeToggle = () => {
+    setIsSelectMode(!isSelectMode);
+    setSelectedShapeId(null);
+  };
+
+  const drawShape = (
+    ctx: CanvasRenderingContext2D,
+    shape: Shape,
+    isSelected: boolean = false
+  ) => {
     const { type, startX, startY, endX, endY, sides } = shape;
     const width = endX - startX;
     const height = endY - startY;
@@ -53,10 +69,29 @@ const Home: React.FC = () => {
 
     switch (type) {
       case "rectangle":
+        if (isSelected) {
+          ctx.strokeStyle = "blue";
+          ctx.lineWidth = 2;
+          ctx.strokeRect(startX, startY, width, height);
+        }
         ctx.fillRect(startX, startY, width, height);
         ctx.strokeRect(startX, startY, width, height);
         break;
       case "circle":
+        if (isSelected) {
+          ctx.strokeStyle = "blue";
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          const radius = Math.sqrt(width * width + height * height) / 2;
+          ctx.arc(
+            startX + width / 2,
+            startY + height / 2,
+            radius,
+            0,
+            2 * Math.PI
+          );
+          ctx.stroke();
+        }
         ctx.beginPath();
         const radius = Math.sqrt(width * width + height * height) / 2;
         ctx.arc(
@@ -70,6 +105,14 @@ const Home: React.FC = () => {
         ctx.stroke();
         break;
       case "line":
+        if (isSelected) {
+          ctx.strokeStyle = "blue";
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(startX, startY);
+          ctx.lineTo(endX, endY);
+          ctx.stroke();
+        }
         ctx.beginPath();
         ctx.moveTo(startX, startY);
         ctx.lineTo(endX, endY);
@@ -92,6 +135,11 @@ const Home: React.FC = () => {
             }
           }
           ctx.closePath();
+          if (isSelected) {
+            ctx.strokeStyle = "blue";
+            ctx.lineWidth = 2;
+            ctx.stroke();
+          }
           ctx.fill();
           ctx.stroke();
         }
@@ -101,20 +149,52 @@ const Home: React.FC = () => {
     }
   };
 
+  const cursorStyle = () => {
+    switch (true) {
+      case isSelectMode:
+        return "default";
+      case selectedShape !== null:
+        return "crosshair";
+      default:
+        return "default";
+    }
+  };
+
   const handleMouseDown = (event: MouseEvent) => {
-    if (canvasRef.current && selectedShape) {
+    if (canvasRef.current && selectedShape && !isSelectMode) {
       const rect = canvasRef.current.getBoundingClientRect();
+      if (!rect) return;
       const x = event.clientX - rect.left;
       const y = event.clientY - rect.top;
       setStartPos({ x, y });
       setCurrentPos({ x, y });
       setIsDrawing(true);
+    } else if (isSelectMode) {
+      const rect = canvasRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      const x = event.clientX - rect.left;
+      const y = event.clientY - rect.top;
+      const shape = shapes.find(
+        (shape) =>
+          x >= shape.startX &&
+          x <= shape.endX &&
+          y >= shape.startY &&
+          y <= shape.endY
+      );
+      if (shape) {
+        setSelectedShapeId(shape.id);
+        setDragOffset({ x: x - shape.startX, y: y - shape.startY });
+      } else {
+        setSelectedShapeId(null);
+        setDragOffset(null);
+      }
     }
   };
 
   const handleMouseMove = (event: MouseEvent) => {
     if (isDrawing && canvasRef.current && startPos) {
       const rect = canvasRef.current.getBoundingClientRect();
+      if (!rect) return;
       const x = event.clientX - rect.left;
       const y = event.clientY - rect.top;
       setCurrentPos({ x, y });
@@ -122,8 +202,11 @@ const Home: React.FC = () => {
       const ctx = canvasRef.current.getContext("2d");
       if (ctx) {
         ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-        shapes.forEach((shape) => drawShape(ctx, shape));
+        shapes.forEach((shape) =>
+          drawShape(ctx, shape, shape.id === selectedShapeId)
+        );
         drawShape(ctx, {
+          id: "",
           type: selectedShape!,
           startX: startPos.x,
           startY: startPos.y,
@@ -132,12 +215,44 @@ const Home: React.FC = () => {
           sides: sides || undefined,
         });
       }
+    } else if (
+      isSelectMode &&
+      selectedShapeId &&
+      dragOffset &&
+      event.buttons === 1
+    ) {
+      // Check if left mouse button is pressed
+      const rect = canvasRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      const x = event.clientX - rect.left;
+      const y = event.clientY - rect.top;
+      const newShapes = shapes.map((shape) =>
+        shape.id === selectedShapeId
+          ? {
+              ...shape,
+              startX: x - dragOffset.x,
+              startY: y - dragOffset.y,
+              endX: x - dragOffset.x + (shape.endX - shape.startX),
+              endY: y - dragOffset.y + (shape.endY - shape.startY),
+            }
+          : shape
+      );
+      setShapes(newShapes);
+
+      const ctx = canvasRef.current?.getContext("2d");
+      if (ctx) {
+        ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+        newShapes.forEach((shape) =>
+          drawShape(ctx, shape, shape.id === selectedShapeId)
+        );
+      }
     }
   };
 
   const handleMouseUp = () => {
     if (isDrawing && startPos && currentPos) {
       const newShape: Shape = {
+        id: Date.now().toString(),
         type: selectedShape!,
         startX: startPos.x,
         startY: startPos.y,
@@ -152,36 +267,60 @@ const Home: React.FC = () => {
     setCurrentPos(null);
   };
 
+  const handleKeyDown = (event: KeyboardEvent) => {
+    if (event.key === "Delete" && selectedShapeId) {
+      setShapes(shapes.filter((shape) => shape.id !== selectedShapeId));
+      setSelectedShapeId(null);
+    }
+  };
+
   useEffect(() => {
     if (canvasRef.current) {
       const canvas = canvasRef.current;
       canvas.addEventListener("mousedown", handleMouseDown);
       canvas.addEventListener("mousemove", handleMouseMove);
       canvas.addEventListener("mouseup", handleMouseUp);
+      window.addEventListener("keydown", handleKeyDown);
 
       return () => {
         canvas.removeEventListener("mousedown", handleMouseDown);
         canvas.removeEventListener("mousemove", handleMouseMove);
         canvas.removeEventListener("mouseup", handleMouseUp);
+        window.removeEventListener("keydown", handleKeyDown);
       };
     }
-  }, [selectedShape, sides, isDrawing, startPos, currentPos, shapes]);
+  }, [
+    selectedShape,
+    sides,
+    isDrawing,
+    startPos,
+    currentPos,
+    shapes,
+    selectedShapeId,
+    handleMouseDown,
+    handleMouseMove,
+    handleMouseUp,
+    handleKeyDown,
+  ]);
 
   useEffect(() => {
     if (canvasRef.current) {
       const ctx = canvasRef.current.getContext("2d");
       if (ctx) {
         ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-        shapes.forEach((shape) => drawShape(ctx, shape));
+        shapes.forEach((shape) =>
+          drawShape(ctx, shape, shape.id === selectedShapeId)
+        );
       }
     }
-  }, [shapes]);
+  }, [shapes, selectedShapeId]);
 
   return (
     <div className="h-screen flex flex-col">
       <Header
         onCanvasSelect={handleCanvasSelect}
         onShapeSelect={handleShapeSelect}
+        onSelectModeToggle={handleSelectModeToggle}
       />
       <div className="flex-grow flex justify-center items-center">
         {canvasSize && (
@@ -192,7 +331,7 @@ const Home: React.FC = () => {
             style={{
               border: "2px solid #ccc",
               backgroundColor: "#fff",
-              cursor: selectedShape ? "crosshair" : "default",
+              cursor: cursorStyle(),
             }}
           />
         )}
