@@ -28,6 +28,8 @@ const Home: React.FC = () => {
   );
   const [shapes, setShapes] = useState<Shape[]>([]);
   const [selectedShapeId, setSelectedShapeId] = useState<string | null>(null);
+  const [selectedShapeIds, setSelectedShapeIds] = useState<string[]>([]);
+
   const [isSelectMode, setIsSelectMode] = useState(false);
   const [dragOffset, setDragOffset] = useState<{ x: number; y: number } | null>(
     null
@@ -64,34 +66,15 @@ const Home: React.FC = () => {
     const height = endY - startY;
 
     ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
-    ctx.strokeStyle = "black";
-    ctx.lineWidth = 2;
+    ctx.strokeStyle = isSelected ? "blue" : "black";
+    ctx.lineWidth = isSelected ? 2 : 1;
 
     switch (type) {
       case "rectangle":
-        if (isSelected) {
-          ctx.strokeStyle = "blue";
-          ctx.lineWidth = 2;
-          ctx.strokeRect(startX, startY, width, height);
-        }
         ctx.fillRect(startX, startY, width, height);
         ctx.strokeRect(startX, startY, width, height);
         break;
       case "circle":
-        if (isSelected) {
-          ctx.strokeStyle = "blue";
-          ctx.lineWidth = 2;
-          ctx.beginPath();
-          const radius = Math.sqrt(width * width + height * height) / 2;
-          ctx.arc(
-            startX + width / 2,
-            startY + height / 2,
-            radius,
-            0,
-            2 * Math.PI
-          );
-          ctx.stroke();
-        }
         ctx.beginPath();
         const radius = Math.sqrt(width * width + height * height) / 2;
         ctx.arc(
@@ -105,14 +88,6 @@ const Home: React.FC = () => {
         ctx.stroke();
         break;
       case "line":
-        if (isSelected) {
-          ctx.strokeStyle = "blue";
-          ctx.lineWidth = 2;
-          ctx.beginPath();
-          ctx.moveTo(startX, startY);
-          ctx.lineTo(endX, endY);
-          ctx.stroke();
-        }
         ctx.beginPath();
         ctx.moveTo(startX, startY);
         ctx.lineTo(endX, endY);
@@ -135,11 +110,6 @@ const Home: React.FC = () => {
             }
           }
           ctx.closePath();
-          if (isSelected) {
-            ctx.strokeStyle = "blue";
-            ctx.lineWidth = 2;
-            ctx.stroke();
-          }
           ctx.fill();
           ctx.stroke();
         }
@@ -182,11 +152,17 @@ const Home: React.FC = () => {
           y <= shape.endY
       );
       if (shape) {
-        setSelectedShapeId(shape.id);
+        if (event.shiftKey) {
+          setSelectedShapeIds((prevIds) => [...prevIds, shape.id]);
+        } else {
+          setSelectedShapeIds([shape.id]);
+        }
         setDragOffset({ x: x - shape.startX, y: y - shape.startY });
       } else {
-        setSelectedShapeId(null);
+        setSelectedShapeIds([]);
         setDragOffset(null);
+        setStartPos({ x, y });
+        setCurrentPos({ x, y });
       }
     }
   };
@@ -203,7 +179,7 @@ const Home: React.FC = () => {
       if (ctx) {
         ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
         shapes.forEach((shape) =>
-          drawShape(ctx, shape, shape.id === selectedShapeId)
+          drawShape(ctx, shape, selectedShapeIds.includes(shape.id))
         );
         drawShape(ctx, {
           id: "",
@@ -217,7 +193,7 @@ const Home: React.FC = () => {
       }
     } else if (
       isSelectMode &&
-      selectedShapeId &&
+      selectedShapeIds.length &&
       dragOffset &&
       event.buttons === 1
     ) {
@@ -227,7 +203,7 @@ const Home: React.FC = () => {
       const x = event.clientX - rect.left;
       const y = event.clientY - rect.top;
       const newShapes = shapes.map((shape) =>
-        shape.id === selectedShapeId
+        selectedShapeIds.includes(shape.id)
           ? {
               ...shape,
               startX: x - dragOffset.x,
@@ -243,7 +219,7 @@ const Home: React.FC = () => {
       if (ctx) {
         ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
         newShapes.forEach((shape) =>
-          drawShape(ctx, shape, shape.id === selectedShapeId)
+          drawShape(ctx, shape, selectedShapeIds.includes(shape.id))
         );
       }
     }
@@ -261,6 +237,25 @@ const Home: React.FC = () => {
         sides: sides || undefined,
       };
       setShapes([...shapes, newShape]);
+    } else if (isSelectMode && startPos && currentPos) {
+      const rect = canvasRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      const x1 = Math.min(startPos.x, currentPos.x);
+      const y1 = Math.min(startPos.y, currentPos.y);
+      const x2 = Math.max(startPos.x, currentPos.x);
+      const y2 = Math.max(startPos.y, currentPos.y);
+
+      const selectedIds = shapes
+        .filter(
+          (shape) =>
+            shape.startX >= x1 &&
+            shape.endX <= x2 &&
+            shape.startY >= y1 &&
+            shape.endY <= y2
+        )
+        .map((shape) => shape.id);
+
+      setSelectedShapeIds(selectedIds);
     }
     setIsDrawing(false);
     setStartPos(null);
